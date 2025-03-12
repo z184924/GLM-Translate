@@ -16,7 +16,17 @@ export async function translateTextCommand() {
         // 创建一个悬浮提示来显示翻译结果
         vscode.languages.registerHoverProvider({ scheme: 'file', language: '*' }, {
             provideHover: () => {
-                return new vscode.Hover(`${translatedText}`);
+                const markdownString = new vscode.MarkdownString();
+                markdownString.appendMarkdown(
+                    `
+                    """
+                    ${translatedText}
+                    """
+                    `
+                );
+                markdownString.supportHtml = true;
+                markdownString.isTrusted = true;
+                return new vscode.Hover(markdownString);
             }
         });
         // 激活 Hover 提供者
@@ -58,8 +68,9 @@ export async function translate(text: string): Promise<string> {
 
                 ##任务:
                 1.仔细研究并深入理解"源文本"的内容、上下文、语境、情感以及和目标语言的文化细微差异。
-                2.根据「翻译要求」将"源文本"准确翻译,返回结果为Markdown格式。
-                3.确保翻译对目标受众来说准确、自然、流畅，必要时可以根据需要调整表达方式以符合文化和语言习惯。
+                2."源文本"的部分单词可能是来源于代码，单词拼写形式可能是驼峰式，请根据上下文判断其含义，并翻译成目标语言。
+                3.根据「翻译要求」将"源文本"准确翻译,返回结果为Markdown格式。
+                4.确保翻译对目标受众来说准确、自然、流畅，必要时可以根据需要调整表达方式以符合文化和语言习惯。
 
                 注意:不要输出任何额外的内容，只能输出翻译内容。这一点非常关键。
                 `
