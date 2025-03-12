@@ -2,7 +2,7 @@
   "name": "glm-translate",
   "displayName": "GLM-Translate",
   "description": "Translate extension by GLM",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.98.0"
   },
@@ -80,6 +80,10 @@
   "dependencies": {
     "openai": "^4.86.2"
   },
-  "repository": "https://github.com/z184924/GLM-Translate",
+  "icon": "image/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/z184924/GLM-Translate"
+  },
   "publisher": "z184924"
 }
