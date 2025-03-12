@@ -1,0 +1,83 @@
+{
+  "name": "glm-translate",
+  "displayName": "GLM-Translate",
+  "description": "Translate extension by GLM",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "GLM-Translate.translateText",
+        "title": "翻译"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "GLM-Translate.translateText",
+          "when": "editorHasSelection",
+          "group": "GLM-Translate"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "GLM-Translate",
+      "properties": {
+        "GLM-Translate.baseUrl": {
+          "type": "string",
+          "default": "https://open.bigmodel.cn/api/paas/v4/",
+          "description": "GLM API Base URL"
+        },
+        "GLM-Translate.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "GLM API Key"
+        },
+        "GLM-Translate.modelName": {
+          "type": "string",
+          "default": "glm-4-flash",
+          "description": "GLM Model Name"
+        },
+        "GLM-Translate.srcLanguage": {
+          "type": "string",
+          "default": "英文",
+          "description": "source language"
+        },
+        "GLM-Translate.targetLanguage": {
+          "type": "string",
+          "default": "中文",
+          "description": "target language"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.98.0",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^9.21.0",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "openai": "^4.86.2"
+  }
+}
