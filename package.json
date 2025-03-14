@@ -2,7 +2,7 @@
   "name": "glm-translate",
   "displayName": "GLM-Translate",
   "description": "Translate extension by GLM",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "engines": {
     "vscode": "^1.98.0"
   },

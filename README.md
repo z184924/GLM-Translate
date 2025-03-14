@@ -7,8 +7,10 @@
 * 支持多种语言之间的翻译
 * 支持自定义翻译模型
 * 选中文本后，鼠标悬停在选中文本上，会显示翻译结果
+* 选中文本后，可右击选择翻译
 
-![效果](https://raw.githubusercontent.com/z184924/GLM-Translate/refs/heads/main/image/md-2.gif)
+![悬停效果](https://raw.githubusercontent.com/z184924/GLM-Translate/refs/heads/main/image/md-2.gif)
+![右击效果](https://raw.githubusercontent.com/z184924/GLM-Translate/refs/heads/main/image/md-3.gif)
 
 ## 准备工作
 
