@@ -1,79 +1,82 @@
 import * as vscode from "vscode";
 import OpenAI from "openai";
 
-let decorationType: vscode.TextEditorDecorationType | undefined;
+export let decorationType: vscode.TextEditorDecorationType | undefined;
+export let buttonFlag: boolean = false;
 
 export async function translateTextCommand() {
-  const editor = vscode.window.activeTextEditor;
+    const editor = vscode.window.activeTextEditor;
 
-  if (!editor) return;
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-    },
-    async (progress) => {
-      const targetLanguage = vscode.workspace
-        .getConfiguration("GLM-Translate")
-        .get("targetLanguage");
-      progress.report({
-        message: `Translating to "${targetLanguage}" ...`,
-      });
+    if (!editor) return;
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+        },
+        async (progress) => {
+            buttonFlag = true;
+            const targetLanguage = vscode.workspace
+                .getConfiguration("GLM-Translate")
+                .get("targetLanguage");
+            progress.report({
+                message: `Translating to "${targetLanguage}" ...`,
+            });
 
-      if (decorationType) {
-        decorationType.dispose();
-      }
+            if (decorationType) {
+                decorationType.dispose();
+            }
 
-      const selection = editor.selection;
-      const text = editor.document.getText(selection);
+            const selection = editor.selection;
+            const text = editor.document.getText(selection);
 
-      // 调用翻译 API 或者你自定义的翻译功能
-      const translatedText = await translate(text);
+            // 调用翻译 API 或者你自定义的翻译功能
+            const translatedText = await translate(text);
 
-      const hoverMessage = new vscode.MarkdownString();
-      hoverMessage.appendMarkdown(translatedText);
-      hoverMessage.isTrusted = true;
+            const hoverMessage = new vscode.MarkdownString();
+            hoverMessage.appendMarkdown(translatedText);
+            hoverMessage.isTrusted = true;
 
-      const decoration: vscode.DecorationOptions = {
-        range: selection,
-        hoverMessage: hoverMessage,
-      };
+            const decoration: vscode.DecorationOptions = {
+                range: selection,
+                hoverMessage: hoverMessage,
+            };
 
-      decorationType = vscode.window.createTextEditorDecorationType({});
-      editor.setDecorations(decorationType, [decoration]);
+            decorationType = vscode.window.createTextEditorDecorationType({});
+            editor.setDecorations(decorationType, [decoration]);
 
-      const position = editor.selection.active;
-      await vscode.commands.executeCommand("editor.action.showHover",position);
-    }
-  );
+            const position = editor.selection.active;
+            await vscode.commands.executeCommand("editor.action.showHover", position);
+            buttonFlag = false;
+        }
+    );
 }
 export async function translate(text: string): Promise<string> {
-  const vscode = require("vscode");
+    const vscode = require("vscode");
 
-  function getConfig() {
-    return vscode.workspace.getConfiguration("GLM-Translate");
-  }
+    function getConfig() {
+        return vscode.workspace.getConfiguration("GLM-Translate");
+    }
 
-  let apiKey = getConfig().get("apiKey");
-  let srcLanguage = getConfig().get("srcLanguage");
-  let targetLanguage = getConfig().get("targetLanguage");
-  let baseUrl = getConfig().get("baseUrl");
-  let modelName = getConfig().get("modelName");
+    let apiKey = getConfig().get("apiKey");
+    let srcLanguage = getConfig().get("srcLanguage");
+    let targetLanguage = getConfig().get("targetLanguage");
+    let baseUrl = getConfig().get("baseUrl");
+    let modelName = getConfig().get("modelName");
 
-  if (!apiKey) {
-    vscode.window.showErrorMessage(
-      "请先设置apiKey。(文件 -> 首选项 -> 设置 -> 扩展 -> GLM-Translate -> apiKey)"
-    );
-    return "";
-  }
+    if (!apiKey) {
+        vscode.window.showErrorMessage(
+            "请先设置apiKey。(文件 -> 首选项 -> 设置 -> 扩展 -> GLM-Translate -> apiKey)"
+        );
+        return "";
+    }
 
-  const openai = new OpenAI({ baseURL: baseUrl, apiKey: apiKey });
+    const openai = new OpenAI({ baseURL: baseUrl, apiKey: apiKey });
 
-  const completion = await openai.chat.completions.create({
-    model: modelName,
-    messages: [
-      {
-        role: "system",
-        content: `
+    const completion = await openai.chat.completions.create({
+        model: modelName,
+        messages: [
+            {
+                role: "system",
+                content: `
                 您是一位精通「${srcLanguage}」与「${targetLanguage}」的翻译专家。
                 
                 ## 翻译要求:
@@ -88,22 +91,22 @@ export async function translate(text: string): Promise<string> {
 
                 注意:不要输出任何额外的内容，只能输出翻译内容。这一点非常关键。
                 `,
-      },
-      {
-        role: "user",
-        content: `
+            },
+            {
+                role: "user",
+                content: `
                 源本文:
                 """ 
                 ${text} 
                 """ 
                 `,
-      },
-    ],
-    top_p: 0.7,
-    temperature: 0.25,
-  });
-  const content = completion.choices[0].message.content;
-  return content !== null
-    ? content
-    : "Translation failed: received null content";
+            },
+        ],
+        top_p: 0.7,
+        temperature: 0.25,
+    });
+    const content = completion.choices[0].message.content;
+    return content !== null
+        ? content
+        : "Translation failed: received null content";
 }
