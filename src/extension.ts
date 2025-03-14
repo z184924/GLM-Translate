@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { translate, translateTextCommand } from './translate';
+import { translate, translateTextCommand, decorationType, buttonFlag } from './translate';
 
 
 // This method is called when your extension is activated
@@ -25,9 +25,12 @@ export function activate(context: vscode.ExtensionContext) {
 			const editor = vscode.window.activeTextEditor;
 			const selection = editor?.selection;
 			// No open text editor or no selection
-			if (!editor || !selection || !selection.contains(position)) return;
+			if (!editor || !selection || !selection.contains(position) || buttonFlag) return;
 			const text = editor.document.getText(selection);
 			if (text) {
+				if (decorationType) {
+					decorationType.dispose();
+				}
 				let translatedText = await translate(text);
 				const markdownString = new vscode.MarkdownString();
 				markdownString.appendMarkdown(
