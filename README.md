@@ -8,7 +8,7 @@
 * 支持自定义翻译模型
 * 选中文本后，鼠标悬停在选中文本上，会显示翻译结果
 
-![效果](https://github.com/z184924/GLM-Translate/blob/main/image/md-2.gif)
+![效果](https://raw.githubusercontent.com/z184924/GLM-Translate/refs/heads/main/image/md-2.gif)
 
 ## 准备工作
 
@@ -19,7 +19,7 @@ API key在[GLM官网](https://bigmodel.cn/)注册申请。
 
 文件 -> 首选项 -> 设置 -> 扩展 -> GLM-Translate -> apiKey，填入GLM API Key即可。
 
-![配置页](https://github.com/z184924/GLM-Translate/blob/main/image/md-1.png)
+![配置页](https://raw.githubusercontent.com/z184924/GLM-Translate/refs/heads/main/image/md-1.png)
 
 如本地有私有模型，则可以在设置中更换`baseUrl`路径。
 
