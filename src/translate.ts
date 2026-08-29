@@ -3,6 +3,13 @@ import OpenAI from "openai";
 
 let decorationType: vscode.TextEditorDecorationType | undefined;
 
+let outputChannel: vscode.OutputChannel | undefined;
+
+function log(message: string) {
+    outputChannel ??= vscode.window.createOutputChannel("GLM-Translate");
+    outputChannel.appendLine(`[${new Date().toLocaleTimeString()}] ${message}`);
+}
+
 const MAX_TEXT_LENGTH = 5000;
 const CACHE_LIMIT = 100;
 const translationCache = new Map<string, string>();
@@ -71,11 +78,13 @@ export async function translateTextCommand() {
             const subscription = token.onCancellationRequested(() => abort.abort());
             let lastReportAt = 0;
             let reportedThinking = false;
+            let reportedText = false;
 
             try {
                 const translatedText = await translate(text, {
                     signal: abort.signal,
-                    // 流式阶段只显示纯文本进度，完成后才做 Markdown 渲染
+                    // 流式阶段只显示纯文本进度，完成后才做 Markdown 渲染；
+                    // 首个分块立即上报（通知创建初期的更新可能被吞），其后节流
                     onProgress: (kind, streamed) => {
                         if (kind === "thinking") {
                             if (reportedThinking) return;
@@ -84,7 +93,8 @@ export async function translateTextCommand() {
                             return;
                         }
                         const now = Date.now();
-                        if (now - lastReportAt < PROGRESS_INTERVAL_MS) return;
+                        if (reportedText && now - lastReportAt < PROGRESS_INTERVAL_MS) return;
+                        reportedText = true;
                         lastReportAt = now;
                         progress.report({ message: progressMessage(streamed) });
                     },
@@ -140,10 +150,13 @@ async function translate(text: string, opts?: TranslateOptions): Promise<string>
     const cacheKey = [baseUrl, modelName, srcLanguage, targetLanguage, enableThinking, reasoningEffort, trimmed].join("|");
     const cached = translationCache.get(cacheKey);
     if (cached !== undefined) {
+        log("命中翻译缓存，直接返回");
         return cached;
     }
 
     const openai = new OpenAI({ baseURL: baseUrl, apiKey: apiKey });
+    const startedAt = Date.now();
+    log(`请求 ${modelName}（thinking ${enableThinking ? "enabled" : "disabled"}），文本 ${trimmed.length} 字符`);
 
     try {
         const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -197,27 +210,42 @@ async function translate(text: string, opts?: TranslateOptions): Promise<string>
             opts?.signal ? { signal: opts.signal } : undefined
         );
         let result = "";
+        let chunkCount = 0;
+        let firstChunkAt = 0;
+        let sawReasoning = false;
         for await (const chunk of stream) {
             // GLM 思考分块在 reasoning_content（SDK 类型未包含），译文分块在 content
             const delta = chunk.choices[0]?.delta as
                 | { content?: string | null; reasoning_content?: string | null }
                 | undefined;
             if (delta?.reasoning_content) {
+                if (!sawReasoning) {
+                    sawReasoning = true;
+                    log(`收到首个思考分块（+${Date.now() - startedAt}ms）`);
+                }
                 opts?.onProgress?.("thinking", "");
             }
             if (delta?.content) {
+                chunkCount++;
+                if (!firstChunkAt) {
+                    firstChunkAt = Date.now();
+                    log(`收到首个译文分块（+${firstChunkAt - startedAt}ms）`);
+                }
                 result += delta.content;
                 opts?.onProgress?.("text", result);
             }
         }
+        log(`翻译完成：${chunkCount} 个译文分块，${result.length} 字符，总耗时 ${Date.now() - startedAt}ms`);
         const finalText = result || "Translation failed: received empty content";
         cachePut(cacheKey, finalText);
         return finalText;
     } catch (error) {
         // 用户主动取消时静默返回，不弹错误提示
         if (opts?.signal?.aborted) {
+            log("已取消翻译");
             return "";
         }
+        log(`翻译出错: ${error instanceof Error ? error.message : String(error)}`);
         vscode.window.showErrorMessage(
             `翻译失败: ${error instanceof Error ? error.message : String(error)}`
         );
