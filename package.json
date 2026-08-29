@@ -42,7 +42,7 @@
         },
         "GLM-Translate.modelName": {
           "type": "string",
-          "default": "glm-4-flash",
+          "default": "glm-4.7-flash",
           "description": "GLM Model Name"
         },
         "GLM-Translate.srcLanguage": {
@@ -54,15 +54,26 @@
           "type": "string",
           "default": "中文",
           "description": "target language"
+        },
+        "GLM-Translate.enableThinking": {
+          "type": "boolean",
+          "default": false,
+          "description": "启用深度思考模式（需模型支持，如 glm-4.7-flash / glm-5 系列；GLM-5.3 系列强制思考无法关闭）"
+        },
+        "GLM-Translate.reasoningEffort": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "xhigh", "max"],
+          "default": "low",
+          "description": "思考级别，仅开启思考模式时生效（需 GLM-5.2+，旧模型将忽略；翻译任务建议 low）"
         }
       }
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "pnpm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
+    "pretest": "pnpm run compile && pnpm run lint",
     "lint": "eslint src",
     "test": "vscode-test"
   },

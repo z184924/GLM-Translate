@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
 	console.log('Congratulations, your extension "GLM-Translate" is now active!');
 
 	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
+	// Now, the implementation with registerCommand
 	// The commandId parameter must match the command field in package.json
 
 	const disposable = vscode.commands.registerCommand('GLM-Translate.translateText', translateTextCommand);
@@ -31,7 +31,8 @@ export function activate(context: vscode.ExtensionContext) {
 				if (decorationType) {
 					decorationType.dispose();
 				}
-				let translatedText = await translate(text);
+				const translatedText = await translate(text, token);
+				if (token.isCancellationRequested || !translatedText) return;
 				const markdownString = new vscode.MarkdownString();
 				markdownString.appendMarkdown(
 					`
@@ -40,14 +41,13 @@ export function activate(context: vscode.ExtensionContext) {
 					"""
 					`
 				);
-				markdownString.supportHtml = true;
-				markdownString.isTrusted = true;
-				return new vscode.Hover(translatedText);
+				return new vscode.Hover(markdownString);
 			}
 		}
 	});
+	context.subscriptions.push(hoverProvider);
 
 }
 
-// This method is called when your extension is deactivated
+// this method is called when your extension is deactivated
 export function deactivate() { }

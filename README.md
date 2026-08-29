@@ -14,7 +14,7 @@
 
 ## 准备工作
 
-所使用的GLM-4-Flash模型为免费模型。只需要准备GLM API Key即可。  
+默认使用的GLM-4.7-Flash模型为免费模型。只需要准备GLM API Key即可。  
 API key在[GLM官网](https://bigmodel.cn/)注册申请。
 
 ## 插件设置
@@ -27,9 +27,13 @@ API key在[GLM官网](https://bigmodel.cn/)注册申请。
 
 1. `baseUrl`：请求模型路径
 2. `apiKey`：GLM API Key
-3. `modelName`：模型名称
+3. `modelName`：模型名称（默认 `glm-4.7-flash`，免费）
 4. `srcLanguage`: 源语言
 5. `targetLanguage`：目标语言
+6. `enableThinking`：启用深度思考模式，默认关闭（需模型支持，如 glm-4.7-flash / glm-5 系列；GLM-5.3 系列强制思考，无法关闭）
+7. `reasoningEffort`：思考级别（`low` / `medium` / `high` / `xhigh` / `max`，默认 `low`），仅开启思考模式时生效，需 GLM-5.2+ 模型，旧模型会忽略
+
+开启思考模式后，模型会先推理再翻译，结果更准确但耗时与 token 消耗更高；日常翻译保持默认关闭即可。
 
 ## 项目仓库
 
