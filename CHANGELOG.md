@@ -6,6 +6,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+- 变更：翻译改为流式输出，进度通知实时显示译文（纯文本），完成后再渲染 Markdown 样式；进度通知支持取消
 - 变更：移除鼠标悬停自动翻译（节省 token、避免干扰操作），仅保留右键菜单「翻译」触发
 - 新增：翻译命令支持自定义快捷键（键盘快捷方式中搜索 GLM-Translate 绑定）
 - 修复：翻译 API 调用出错后悬停翻译永久失效的问题（`buttonFlag` 卡死），并增加错误提示

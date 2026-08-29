@@ -7,6 +7,11 @@ const MAX_TEXT_LENGTH = 5000;
 const CACHE_LIMIT = 100;
 const translationCache = new Map<string, string>();
 
+// 进度通知只显示末尾一段文字，过长时保持最新内容可见
+const PROGRESS_TAIL_CHARS = 200;
+// UI 刷新节流间隔，避免每个网络分块都触发一次通知更新
+const PROGRESS_INTERVAL_MS = 100;
+
 // GLM 支持的思考级别（低版本 openai SDK 类型只包含 low/medium/high）
 type ReasoningEffort = "low" | "medium" | "high" | "xhigh" | "max";
 
@@ -33,6 +38,12 @@ function cachePut(key: string, value: string) {
     }
 }
 
+function progressMessage(streamed: string) {
+    return streamed.length > PROGRESS_TAIL_CHARS
+        ? `…${streamed.slice(-PROGRESS_TAIL_CHARS)}`
+        : streamed;
+}
+
 export async function translateTextCommand() {
     const editor = vscode.window.activeTextEditor;
 
@@ -44,8 +55,9 @@ export async function translateTextCommand() {
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
+            cancellable: true,
         },
-        async (progress) => {
+        async (progress, token) => {
             const targetLanguage = getConfig().targetLanguage;
             progress.report({
                 message: `Translating to "${targetLanguage}" ...`,
@@ -55,28 +67,57 @@ export async function translateTextCommand() {
                 decorationType.dispose();
             }
 
-            const selection = editor.selection;
-            const translatedText = await translate(text);
+            const abort = new AbortController();
+            const subscription = token.onCancellationRequested(() => abort.abort());
+            let lastReportAt = 0;
+            let reportedThinking = false;
 
-            if (!translatedText) return;
+            try {
+                const translatedText = await translate(text, {
+                    signal: abort.signal,
+                    // 流式阶段只显示纯文本进度，完成后才做 Markdown 渲染
+                    onProgress: (kind, streamed) => {
+                        if (kind === "thinking") {
+                            if (reportedThinking) return;
+                            reportedThinking = true;
+                            progress.report({ message: "模型思考中..." });
+                            return;
+                        }
+                        const now = Date.now();
+                        if (now - lastReportAt < PROGRESS_INTERVAL_MS) return;
+                        lastReportAt = now;
+                        progress.report({ message: progressMessage(streamed) });
+                    },
+                });
 
-            const hoverMessage = new vscode.MarkdownString();
-            hoverMessage.appendMarkdown(translatedText);
+                if (!translatedText) return;
 
-            const decoration: vscode.DecorationOptions = {
-                range: selection,
-                hoverMessage: hoverMessage,
-            };
+                const selection = editor.selection;
+                const hoverMessage = new vscode.MarkdownString();
+                hoverMessage.appendMarkdown(translatedText);
 
-            decorationType = vscode.window.createTextEditorDecorationType({});
-            editor.setDecorations(decorationType, [decoration]);
+                const decoration: vscode.DecorationOptions = {
+                    range: selection,
+                    hoverMessage: hoverMessage,
+                };
 
-            await vscode.commands.executeCommand("editor.action.showHover");
+                decorationType = vscode.window.createTextEditorDecorationType({});
+                editor.setDecorations(decorationType, [decoration]);
+
+                await vscode.commands.executeCommand("editor.action.showHover");
+            } finally {
+                subscription.dispose();
+            }
         }
     );
 }
 
-async function translate(text: string): Promise<string> {
+interface TranslateOptions {
+    onProgress?: (kind: "thinking" | "text", streamed: string) => void;
+    signal?: AbortSignal;
+}
+
+async function translate(text: string, opts?: TranslateOptions): Promise<string> {
     const trimmed = text.trim();
     if (!trimmed) return "";
 
@@ -139,27 +180,44 @@ async function translate(text: string): Promise<string> {
         // 思考开启时不设置采样参数（低温度与推理模式冲突）。
         // SDK 类型缺少 thinking，reasoning_effort 取值也比 GLM 的少，
         // 故按 GLM 语义构造请求，仅在调用 SDK 的边界断言回去
-        const request: Omit<OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming, "reasoning_effort"> & {
+        const request: Omit<OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming, "reasoning_effort"> & {
             thinking?: { type: "enabled" | "disabled" };
             reasoning_effort?: ReasoningEffort | null;
         } = {
             model: modelName || "glm-4.7-flash",
             messages,
+            stream: true,
             thinking: { type: enableThinking ? "enabled" : "disabled" },
             ...(enableThinking
                 ? { reasoning_effort: reasoningEffort || "low" }
                 : { top_p: 0.7, temperature: 0.25 }),
         };
-        const completion = await openai.chat.completions.create(
-            request as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming
+        const stream = await openai.chat.completions.create(
+            request as OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming,
+            opts?.signal ? { signal: opts.signal } : undefined
         );
-        const content = completion.choices[0].message.content;
-        const result = content !== null
-            ? content
-            : "Translation failed: received null content";
-        cachePut(cacheKey, result);
-        return result;
+        let result = "";
+        for await (const chunk of stream) {
+            // GLM 思考分块在 reasoning_content（SDK 类型未包含），译文分块在 content
+            const delta = chunk.choices[0]?.delta as
+                | { content?: string | null; reasoning_content?: string | null }
+                | undefined;
+            if (delta?.reasoning_content) {
+                opts?.onProgress?.("thinking", "");
+            }
+            if (delta?.content) {
+                result += delta.content;
+                opts?.onProgress?.("text", result);
+            }
+        }
+        const finalText = result || "Translation failed: received empty content";
+        cachePut(cacheKey, finalText);
+        return finalText;
     } catch (error) {
+        // 用户主动取消时静默返回，不弹错误提示
+        if (opts?.signal?.aborted) {
+            return "";
+        }
         vscode.window.showErrorMessage(
             `翻译失败: ${error instanceof Error ? error.message : String(error)}`
         );
