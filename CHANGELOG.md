@@ -4,7 +4,7 @@ All notable changes to the "GLM-Translate" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.0.7] - 2026-08-29
 
 ### Added
 - 深度思考模式配置 `enableThinking`（默认关闭；始终显式发送 `thinking` 参数，GLM-4.5+ 系列生效，旧模型忽略）
