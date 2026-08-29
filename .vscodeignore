@@ -1,8 +1,11 @@
 .vscode/**
 .vscode-test/**
+.zcode/**
 src/**
+out/**
 scripts/**
 image/md-*
+pnpm-workspace.yaml
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md

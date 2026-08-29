@@ -20,7 +20,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - 默认模型由 `glm-4-flash` 更换为免费的 `glm-4.7-flash`
 - 选中文本超过 5000 字符时提示并取消翻译
 - 移除译文 Markdown 的可信标记（`isTrusted`），避免模型输出命令链接被点击执行的风险
-- 开发与构建流程由 npm 切换到 pnpm
+- 开发与构建流程由 npm 切换到 pnpm，扩展改为 esbuild 打包（vsix 不再携带 node_modules，体积约 210KB）
 
 ### Fixed
 - 翻译 API 调用失败时弹出错误提示（此前异常未被捕获）
