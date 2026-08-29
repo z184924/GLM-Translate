@@ -16,6 +16,8 @@
 默认使用的GLM-4.7-Flash模型为免费模型。只需要准备GLM API Key即可。  
 API key在[GLM官网](https://bigmodel.cn/)注册申请。
 
+> 注：免费模型在高峰时段首字延迟可能较长（等待数十秒属服务端排队，非插件问题）。如需更快响应，可在设置中将 `modelName` 更换为更新的主流模型（需付费）。
+
 ## 插件设置
 
 文件 -> 首选项 -> 设置 -> 扩展 -> GLM-Translate -> apiKey，填入GLM API Key即可。
