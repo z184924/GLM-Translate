@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { translate, translateTextCommand, decorationType, buttonFlag } from './translate';
+import { translateTextCommand } from './translate';
 
 
 // This method is called when your extension is activated
@@ -18,35 +18,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const disposable = vscode.commands.registerCommand('GLM-Translate.translateText', translateTextCommand);
 	context.subscriptions.push(disposable);
-
-	// 注册 HoverProvider
-	const hoverProvider = vscode.languages.registerHoverProvider('*', {
-		provideHover: async (document, position, token) => {
-			const editor = vscode.window.activeTextEditor;
-			const selection = editor?.selection;
-			// No open text editor or no selection
-			if (!editor || !selection || !selection.contains(position) || buttonFlag) return;
-			const text = editor.document.getText(selection);
-			if (text) {
-				if (decorationType) {
-					decorationType.dispose();
-				}
-				const translatedText = await translate(text, token);
-				if (token.isCancellationRequested || !translatedText) return;
-				const markdownString = new vscode.MarkdownString();
-				markdownString.appendMarkdown(
-					`
-					"""
-					${translatedText}
-					"""
-					`
-				);
-				return new vscode.Hover(markdownString);
-			}
-		}
-	});
-	context.subscriptions.push(hoverProvider);
-
 }
 
 // this method is called when your extension is deactivated

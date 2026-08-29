@@ -1,8 +1,7 @@
 import * as vscode from "vscode";
 import OpenAI from "openai";
 
-export let decorationType: vscode.TextEditorDecorationType | undefined;
-export let buttonFlag: boolean = false;
+let decorationType: vscode.TextEditorDecorationType | undefined;
 
 const MAX_TEXT_LENGTH = 5000;
 const CACHE_LIMIT = 100;
@@ -47,45 +46,37 @@ export async function translateTextCommand() {
             location: vscode.ProgressLocation.Notification,
         },
         async (progress) => {
-            buttonFlag = true;
-            try {
-                const targetLanguage = getConfig().targetLanguage;
-                progress.report({
-                    message: `Translating to "${targetLanguage}" ...`,
-                });
+            const targetLanguage = getConfig().targetLanguage;
+            progress.report({
+                message: `Translating to "${targetLanguage}" ...`,
+            });
 
-                if (decorationType) {
-                    decorationType.dispose();
-                }
-
-                const selection = editor.selection;
-                const translatedText = await translate(text);
-
-                if (!translatedText) return;
-
-                const hoverMessage = new vscode.MarkdownString();
-                hoverMessage.appendMarkdown(translatedText);
-
-                const decoration: vscode.DecorationOptions = {
-                    range: selection,
-                    hoverMessage: hoverMessage,
-                };
-
-                decorationType = vscode.window.createTextEditorDecorationType({});
-                editor.setDecorations(decorationType, [decoration]);
-
-                await vscode.commands.executeCommand("editor.action.showHover");
-            } finally {
-                buttonFlag = false;
+            if (decorationType) {
+                decorationType.dispose();
             }
+
+            const selection = editor.selection;
+            const translatedText = await translate(text);
+
+            if (!translatedText) return;
+
+            const hoverMessage = new vscode.MarkdownString();
+            hoverMessage.appendMarkdown(translatedText);
+
+            const decoration: vscode.DecorationOptions = {
+                range: selection,
+                hoverMessage: hoverMessage,
+            };
+
+            decorationType = vscode.window.createTextEditorDecorationType({});
+            editor.setDecorations(decorationType, [decoration]);
+
+            await vscode.commands.executeCommand("editor.action.showHover");
         }
     );
 }
 
-export async function translate(
-    text: string,
-    token?: vscode.CancellationToken
-): Promise<string> {
+async function translate(text: string): Promise<string> {
     const trimmed = text.trim();
     if (!trimmed) return "";
 
@@ -113,17 +104,7 @@ export async function translate(
 
     const openai = new OpenAI({ baseURL: baseUrl, apiKey: apiKey });
 
-    let abortController: AbortController | undefined;
-    let cancellationSubscription: vscode.Disposable | undefined;
-    if (token) {
-        abortController = new AbortController();
-        cancellationSubscription = token.onCancellationRequested(() => abortController?.abort());
-    }
-
     try {
-        // thinking 必须显式发送：GLM-4.7/5 系列默认开启思考，显式 disabled 才能保证默认关闭，
-        // 不支持该参数的旧模型会忽略它；reasoning_effort 为顶层参数，仅 GLM-5.2+ 生效；
-        // 思考开启时不设置采样参数（低温度与推理模式冲突）
         const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
             {
                 role: "system",
@@ -153,7 +134,10 @@ export async function translate(
                 `,
             },
         ];
-        // SDK 类型缺少 GLM 特有的 thinking 参数，reasoning_effort 取值也比 GLM 的少，
+        // thinking 必须显式发送：GLM-4.7/5 系列默认开启思考，显式 disabled 才能保证默认关闭，
+        // 不支持该参数的旧模型会忽略它；reasoning_effort 为顶层参数，仅 GLM-5.2+ 生效；
+        // 思考开启时不设置采样参数（低温度与推理模式冲突）。
+        // SDK 类型缺少 thinking，reasoning_effort 取值也比 GLM 的少，
         // 故按 GLM 语义构造请求，仅在调用 SDK 的边界断言回去
         const request: Omit<OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming, "reasoning_effort"> & {
             thinking?: { type: "enabled" | "disabled" };
@@ -167,8 +151,7 @@ export async function translate(
                 : { top_p: 0.7, temperature: 0.25 }),
         };
         const completion = await openai.chat.completions.create(
-            request as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
-            abortController ? { signal: abortController.signal } : undefined
+            request as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming
         );
         const content = completion.choices[0].message.content;
         const result = content !== null
@@ -177,15 +160,9 @@ export async function translate(
         cachePut(cacheKey, result);
         return result;
     } catch (error) {
-        // 悬停已移开等取消场景静默返回，不弹错误提示
-        if (token?.isCancellationRequested) {
-            return "";
-        }
         vscode.window.showErrorMessage(
             `翻译失败: ${error instanceof Error ? error.message : String(error)}`
         );
         return "";
-    } finally {
-        cancellationSubscription?.dispose();
     }
 }

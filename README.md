@@ -6,10 +6,9 @@
 
 * 支持多种语言之间的翻译
 * 支持自定义翻译模型
-* 选中文本后，鼠标悬停在选中文本上，会显示翻译结果
-* 选中文本后，可右击选择翻译
+* 选中文本后，右击选择「翻译」即可翻译
+* 支持自定义快捷键：打开键盘快捷方式（`Ctrl+K Ctrl+S`）搜索 `GLM-Translate`，为「翻译」命令绑定按键即可
 
-![悬停效果](https://raw.githubusercontent.com/z184924/GLM-Translate/refs/heads/main/image/md-2.gif)
 ![右击效果](https://raw.githubusercontent.com/z184924/GLM-Translate/refs/heads/main/image/md-3.gif)
 
 ## 准备工作

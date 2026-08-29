@@ -15,7 +15,14 @@
     "commands": [
       {
         "command": "GLM-Translate.translateText",
-        "title": "翻译"
+        "title": "翻译",
+        "category": "GLM-Translate"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "GLM-Translate.translateText",
+        "when": "editorHasSelection"
       }
     ],
     "menus": {
